@@ -78,6 +78,7 @@ class ConveyorSerialController(Node):
             self.get_logger().info(f"Serial connected on {SERIAL_PORT} at {BAUD_RATE} baud")
         except serial.SerialException as e:
             self.get_logger().error(f"Serial connection failed: {e}")
+            self.ser = None
     
     def check_serial(self):
         self.open_serial()
@@ -145,6 +146,7 @@ class ConveyorSerialController(Node):
                 if self.ser and self.ser.is_open:
                     self.ser.close()  # 포트 닫기
                     self.get_logger().info("시리얼 포트가 닫혔습니다.")
+                self.ser = None
                 return  # 에러가 나면 종료하여 다시 연결하도록 처리
                     
 
