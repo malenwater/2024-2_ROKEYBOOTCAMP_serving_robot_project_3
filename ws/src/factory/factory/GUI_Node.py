@@ -97,7 +97,7 @@ class ConveyorGUI(QWidget):
         """컨베이어 상태를 GUI에 반영 (메인 스레드에서 실행)"""
         QTimer.singleShot(0, lambda: self.status_label.setText(f"현재 상태: {status}"))
 
-if __name__ == '__main__':
+def main():
     rclpy.init()
     app = QApplication(sys.argv)
     window = ConveyorGUI()
@@ -105,3 +105,5 @@ if __name__ == '__main__':
     
     app.exec_()  # Qt 이벤트 루프 실행
     rclpy.shutdown()  # ROS 종료
+if __name__ == '__main__':
+    main()
