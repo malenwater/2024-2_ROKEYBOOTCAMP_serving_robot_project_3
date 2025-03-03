@@ -22,6 +22,8 @@ class ConveyorSerialController(Node):
         except serial.SerialException as e:
             self.get_logger().error(f"Serial connection failed: {e}")
             self.ser = None
+        # 상태를 발행할 Publisher 설정
+        self.status_publisher = self.create_publisher(String, 'conveyor/status', 10)
 
         # 'conveyor/control' 토픽 구독
         self.subscription = self.create_subscription(
@@ -30,7 +32,7 @@ class ConveyorSerialController(Node):
             self.control_callback,
             10
         )
-
+        self.status = None
         # 데이터 수신 쓰레드 시작
         self.receive_thread = threading.Thread(target=self.read_serial_data)
         self.receive_thread.daemon = True  # 프로그램 종료 시 함께 종료
@@ -53,21 +55,58 @@ class ConveyorSerialController(Node):
                 self.get_logger().error("control 명령이 없습니다!")
                 return
 
-            self.get_logger().info(f"Received: control={control_cmd}, distance={distance_mm}")
-            distance_mm = 10.5 * float(distance_mm)
-            # JSON을 문자열로 변환 후 시리얼 전송
-            serial_data = str(distance_mm) + "\n"
-            self.ser.write(serial_data.encode())
-            self.get_logger().info(f"Sent to Arduino: {serial_data.strip()}")
+            # 받은 명령에 따라 동작을 구분
+            if control_cmd == "go":
+                if distance_mm is not None:
+                    self.get_logger().info(f"Received: control={control_cmd}, distance={distance_mm}")
+                    distance_mm = 10.5 * float(distance_mm)
+                    # JSON을 문자열로 변환 후 시리얼 전송
+                    serial_data = str(distance_mm) + "\n"
+                    self.ser.write(serial_data.encode())
+                    self.get_logger().info(f"Sent to Arduino: {serial_data.strip()}")
+                else:
+                    self.get_logger().error("distance.mm 값이 없습니다!")
 
+            elif control_cmd == "stop":
+                self.get_logger().info("Received: control=stop")
+                # Arduino로 "stop" 신호 전송 (예: stop 명령을 보내는 방식)
+                serial_data = "1\n"
+                self.ser.write(serial_data.encode())
+                self.get_logger().info(f"Sent to Arduino: {serial_data.strip()}")
+                
         except json.JSONDecodeError:
             self.get_logger().error("JSON 파싱 실패!")
 
     def read_serial_data(self):
+        previous_status = self.status  # 초기 상태 기록
         while rclpy.ok():  # rclpy가 활성화된 동안 계속 실행
             if self.ser and self.ser.in_waiting > 0:
                 raw_data = self.ser.read_all()  # 시리얼 포트에서 데이터 읽기
-                self.get_logger().info(f"Received from Arduino: {raw_data.decode().strip()}")
+                decoded_data = raw_data.decode().strip()
+
+                # 받은 데이터에 따라 상태 변경
+                if 's' in decoded_data:
+                    new_status = "INIT"
+                elif '.' in decoded_data:
+                    new_status = "READY"
+                elif '_' in decoded_data:
+                    new_status = "RUN"
+                else:
+                    new_status = self.status  # 상태가 변경되지 않으면 기존 상태 유지
+
+                # 상태가 바뀐 경우에만 로그 출력
+                if new_status != previous_status:
+                    self.status = new_status
+                    self.get_logger().info(f"Received from Arduino: {decoded_data}, Current Status: {self.status}")
+                    previous_status = self.status  # 상태 업데이트
+                    
+                    # 상태를 'conveyor/status' 토픽에 발행
+                    status_msg = String()
+                    status_msg.data = self.status
+                    self.status_publisher.publish(status_msg)
+
+                    previous_status = self.status  # 상태 업데이트
+                    
 
 def main(args=None):
     rclpy.init(args=args)
