@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             'ConveyorBelt = factory.ConveyorSerialController:main',
             'GUI = factory.GUI_Node:main',
+            'cam = factory.cam_publish:main',
         ],
     },
 )
