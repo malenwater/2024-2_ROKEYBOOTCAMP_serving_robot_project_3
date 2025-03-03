@@ -1,0 +1,1 @@
+ros2 topic pub /conveyor/control std_msgs/msg/String "{data: '{\"control\": \"go\", \"distance.mm\": 100}'}" --once
