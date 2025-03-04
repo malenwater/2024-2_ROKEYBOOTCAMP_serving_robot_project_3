@@ -67,7 +67,7 @@ class ConveyorController(Node, QObject):
             cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             # 400x300으로 리사이즈
-            resized_image = cv2.resize(cv_image, (640, 360))
+            resized_image = cv2.resize(cv_image, (1280, 720))
 
             # OpenCV 이미지 신호 전송
             self.image_signal.emit(resized_image)
@@ -113,7 +113,7 @@ class ConveyorGUI(QWidget):
         self.button_execute.clicked.connect(self.execute_command)
         self.camera_label = QLabel("카메라 피드 없음")
         self.camera_label.setStyleSheet("border: 1px solid black; background-color: black;")
-        self.camera_label.setFixedSize(640, 360)
+        self.camera_label.setFixedSize(1280, 720)
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.button_start)
         button_layout.addWidget(self.button_stop)
