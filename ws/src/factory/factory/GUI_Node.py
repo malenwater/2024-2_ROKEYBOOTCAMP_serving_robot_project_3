@@ -26,7 +26,7 @@ class ConveyorController(Node, QObject):
         self.selection_publisher = self.create_publisher(String, 'conveyor/selection', 10)
         self.command_publisher = self.create_publisher(String, 'gui/command', 10)  # 새로운 퍼블리셔 추가
         self.subscription = self.create_subscription(String, 'conveyor/status', self.status_callback, 10)
-        self.image_subscription = self.create_subscription(CompressedImage, '/image_raw/compressed', self.image_callback, 10)
+        self.image_subscription = self.create_subscription(CompressedImage, 'yolo/compressed', self.image_callback, 10)
         self.bridge = CvBridge()
     
     def send_command(self, control):
@@ -67,7 +67,7 @@ class ConveyorController(Node, QObject):
             cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             # 400x300으로 리사이즈
-            resized_image = cv2.resize(cv_image, (1280, 720))
+            resized_image = cv2.resize(cv_image, (640, 360))
 
             # OpenCV 이미지 신호 전송
             self.image_signal.emit(resized_image)
@@ -113,7 +113,7 @@ class ConveyorGUI(QWidget):
         self.button_execute.clicked.connect(self.execute_command)
         self.camera_label = QLabel("카메라 피드 없음")
         self.camera_label.setStyleSheet("border: 1px solid black; background-color: black;")
-        self.camera_label.setFixedSize(1280, 720)
+        self.camera_label.setFixedSize(640, 360)
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.button_start)
         button_layout.addWidget(self.button_stop)
