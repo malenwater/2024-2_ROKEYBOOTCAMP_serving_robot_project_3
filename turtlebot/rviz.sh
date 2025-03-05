@@ -1,0 +1,2 @@
+ros2 launch turtlebot3_manipulation_moveit_config moveit_core.launch.py
+ros2 run turtlebot_moveit turtlebot_arm_controller

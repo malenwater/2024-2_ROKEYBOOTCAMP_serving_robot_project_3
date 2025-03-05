@@ -1,12 +1,22 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Pose, PoseArray
 from aruco_msgs.msg import MarkerArray 
 from srv_call_test import TurtlebotArmClient
 import ast  # 문자열을 리스트로 변환하기 위한 라이브러리
 import json
 import time
+import os
+
+# ANSI 색상 코드 정의
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+MAGENTA = "\033[95m"
+CYAN = "\033[96m"
+RESET = "\033[0m"  # 색상 초기화
 
 class ManagingNode(Node):
     def __init__(self):
@@ -14,6 +24,7 @@ class ManagingNode(Node):
         self.get_logger().info(f"managing_node 시작")
         self.DEBUG = True
         self.WORKING = False
+        self.ID_CLASS = [0, 1, 2]
         # 사용자 입력 처리 (gui/command 토픽)
         self.subscription_command = self.create_subscription(
             String,
@@ -56,6 +67,45 @@ class ManagingNode(Node):
         self.target_marker_id = None
         self.marker = []
         self.arm_client = TurtlebotArmClient()
+        self.armrun = False
+        self.count = 0
+        self.yolofind = False
+        self.block_ids = []
+        self.len_block_ids = 0
+        # 파일 경로 설정
+        file_path = './offset_values.txt'
+
+        if os.path.exists(file_path):
+            with open(file_path, "r") as file:
+                for line in file:
+                    # 각 줄을 "변수명 : 값" 형식으로 분리하여 변수에 값을 넣음
+                    parts = line.strip().split(":")
+                    if len(parts) == 2:
+                        var_name, value = parts
+                        try:
+                            # 값을 float로 변환하여 변수에 할당
+                            value = float(value.strip())
+                            if var_name == "right_low_x_offset ":
+                                self.right_low_x_offset = value
+                            elif var_name == "right_low_y_offset ":
+                                self.right_low_y_offset = value
+                            elif var_name == "right_high_x_offset ":
+                                self.right_high_x_offset = value
+                            elif var_name == "right_high_y_offset ":
+                                self.right_high_y_offset = value
+                            elif var_name == "left_low_x_offset ":
+                                self.left_low_x_offset = value
+                            elif var_name == "left_low_y_offset ":
+                                self.left_low_y_offset = value
+                            elif var_name == "left_high_x_offset ":
+                                self.left_high_x_offset = value
+                            elif var_name == "left_high_y_offset ":
+                                self.left_high_y_offset = value
+                        except ValueError:
+                            pass
+        self.state = "START"
+        response = self.arm_client.send_request(1, "camera_home")
+        self.get_logger().info(f'Response: {response.response}')
         
         self.get_logger().info(f"managing_node 설정 끝")
         
@@ -83,31 +133,21 @@ class ManagingNode(Node):
                 self.get_logger().info(f"[사용자 입력] 수신된 red 명령: {self.GUI_COMMAND['red'] }")
                 self.get_logger().info(f"[사용자 입력] 수신된 blue 명령: {self.GUI_COMMAND['blue'] }")
                 self.get_logger().info(f"[사용자 입력] 수신된 goal 명령: {self.GUI_COMMAND['goal'] }")
-            block_ids = ["0"] * int(self.GUI_COMMAND['red']) + ["1"] * int(self.GUI_COMMAND['blue'])
-            
-            # 1번째 MARKER의 0번을 읽고 일정 위치까지 이동하기 (Aroco + cmd_vel)
-                # for 문으로 레드, 블루의 개수에 따라 아래 3,4,5번을 반복한다
-                # 3번째 특정 위치에 가서 사진을 찍어서 사용할 블럭의 위치를 특정한다. (팔작업 + YOLO)
-                # 4번째 특정 위치에 가서 블럭을 집고, 컨테이너 벨트에 올리고 원위치로 온다. (팔작업)
-                # 5번째 컨테이너 벨트를 움직인다. (컨테이너 벨트)
-            # 컨테이너 벨트를 움직여서 모든 블럭을 basket에 옮긴다. (컨테이너 벨트)
-            # basket을 찾기 위해 움직인다. (Aroco + cmd_vel)
-            # basket을 찾으면 잡는다. (팔작업 + YOLO)
-            # basket을 반대로 다시 두고 MARKER을 찾기위해 다시 움직인다.(해당하는)
-            # MARKER을 중앙에 두고 다시 basket을 놓는다. 
-            
-            self.move_Block_status()
-            for block_id in block_ids:
-                if self.DEBUG :
-                    self.get_logger().info(f"집을 박스 ID: {block_id}")
-                pick_place = self.check_Block_Place(block_id)
-                self.pick_Block_Place(pick_place)
-                self.move_Conveyor_Next()
-            self.move_Conveyor_ALL()
-            self.check_move_Basket()
-            self.pick_Basket()
-            self.check_move_aroco()
-            self.put_aroco()
+            self.block_ids = [0] * int(self.GUI_COMMAND['red']) + [1] * int(self.GUI_COMMAND['blue'])
+            self.len_block_ids = len(self.block_ids)
+
+            self.state = 'ARUCO'
+            self.aroco_Block_status(self.state)
+            # self.state = 'YOLO'
+            self.yolo_status(self.state)
+            # self.state = 'BACKWARD'
+            self.aroco_Block_status(self.state)
+            # self.state = 'PURPLE'
+            self.yolo_status(self.state)
+            # self.state = 'CHECK'
+            self.aroco_Block_status(self.state)
+            self.get_logger().info(f'Response: {self.state}')
+
             
         except Exception as e:
             self.get_logger().error(f"[사용자 입력] 명령 해석 실패: {e}")
@@ -117,55 +157,308 @@ class ManagingNode(Node):
     def publish_cmd_vel(self, linear_x):
         self.twist.linear.x = linear_x
         self.twist.angular.z = 0.0
-        self.cmd_vel_publisher.publish(self.twist)   
+        self.cmd_vel_publisher.publish(self.twist)  
         
-    def move_Block_status(self):
+    def check_pose(self,data_list):
+        pose = {
+            "1" : [],
+            "2" : [],
+            "3" : [],
+            "4" : [],
+        }
+        for data in data_list:
+            if data[1] > 0 and data[2] > 0:
+                pose["1"] =  data
+            elif data[1] > 0 and data[2] < 0:
+                pose["2"] =  data
+            elif data[1] < 0 and data[2] > 0:
+                pose["3"] =  data
+            elif data[1] < 0 and data[2] < 0:
+                pose["4"] =  data
+        return pose
+    
+    def choose_block(self,data_list):
+        data_pose = self.check_pose(data_list)
+        pick_data = self.block_ids[self.count][0]
+        if data_pose["1"][0] == pick_data:
+            return data_pose["1"]
+        elif data_pose["2"][0] == pick_data:
+            return data_pose["2"]
+        elif data_pose["3"][0] == pick_data:
+            return data_pose["3"]
+        elif data_pose["4"][0] == pick_data:
+            return data_pose["4"]
+        return data_list
+    
+    def yolo_status(self,state):
+        while True:
+            if self.YOLO_DETECTED_INFO is None:
+                continue
+            if state != self.state:
+                break
+            
+            if not self.armrun:  # 로봇 암이 동작 중이 아니면
+                try:
+                    data_list = self.YOLO_DETECTED_INFO
+                    if len(data_list) > 0:
+                        data_list = self.choose_block(data_list)
+                        self.yolo_x = data_list[1]
+                        self.yolo_y = data_list[2]
+                        
+                        print(f"Detected coordinates: {self.yolo_x}, {self.yolo_y}")
+                        print("done")
+
+                        if self.state == 'YOLO':
+                            if not self.yolofind:
+                                self.yolofind = True
+                                self.yolo_arm_controll()
+                                
+                                if self.count == self.len_block_ids:
+                                    self.home2_arm_controll()
+                                    self.state = 'BACKWARD'
+                                    self.count = 0
+                        
+                        elif self.state == 'PURPLE':
+                            if not self.yolofind and abs(self.yolo_x) < 0.01:
+                                self.publish_cmd_vel(0.0)
+                                self.yolofind = True
+                                self.purple_arm_control()
+                            elif not self.yolofind and self.yolo_x > 0.01:
+                                self.publish_cmd_vel(-0.01)
+                            elif not self.yolofind and self.yolo_x < -0.01:
+                                self.publish_cmd_vel(0.01)                      
+                                
+                except Exception as e:
+                    self.get_logger().error(f"Error processing the data: {e}")
+            else:
+                time.sleep(0.2)
+                    
+    def purple_arm_control(self):
+        if self.state == 'PURPLE':
+            arm_client = TurtlebotArmClient()
+
+
+            print ("task start!")
+            
+            print(f"Get coordinates: {self.yolo_x}, {self.yolo_y}")
+
+            if self.yolofind:
+                self.armrun = True
+
+                response = arm_client.send_request(2, "open")
+                arm_client.get_logger().info(f'Response: {response.response}')
+                time.sleep(1)
+
+                pose_array = self.append_pose_init(0.0103589 ,-0.2700000  ,0.205779  - self.yolo_y + 0.06 )
+
+                response = arm_client.send_request(3, "", pose_array)
+                arm_client.get_logger().info(f'Response: {response.response}')
+
+                response = arm_client.send_request(9, "")
+                arm_client.get_logger().info(f'Response: {response.response}')
+
+                pose_array = self.append_pose_init(0.0103589,-0.3000000   ,0.205779  - self.yolo_y + 0.06 )
+
+                response = arm_client.send_request(3, "", pose_array)
+                arm_client.get_logger().info(f'Response: {response.response}')     
+
+                response = arm_client.send_request(9, "")
+                arm_client.get_logger().info(f'Response: {response.response}')
+
+                response = arm_client.send_request(2, "close")
+                arm_client.get_logger().info(f'Response: {response.response}')
+                time.sleep(1)
+
+                response = arm_client.send_request(1, "box_up_01")
+                arm_client.get_logger().info(f'Response: {response.response}')    
+                time.sleep(1)
+
+                response = arm_client.send_request(1, "box_up_02")
+                arm_client.get_logger().info(f'Response: {response.response}')    
+                time.sleep(1)
+
+                response = arm_client.send_request(1, "box_up_03")
+                arm_client.get_logger().info(f'Response: {response.response}')    
+                time.sleep(1)
+
+                response = arm_client.send_request(1, "box_back_01")
+                arm_client.get_logger().info(f'Response: {response.response}')   
+
+                time.sleep(1)
+
+
+                print("jobs_done")
+
+                self.armrun = False
+                self.yolofind = False  # 작업 완료 후 초기화
+                
+                self.state = 'CHECK'
+                
+    def home2_arm_controll(self):
+        arm_client = TurtlebotArmClient()
+        response = arm_client.send_request(1, "home2")
+        arm_client.get_logger().info(f'Response: {response.response}')
+        time.sleep(3)      
+    
+    def append_pose_init(self, x,y,z):
+        pose_array = PoseArray()
+        pose = Pose()
+
+        pose.position.x = x
+        pose.position.y =  y
+        pose.position.z =  z
+
+        pose_array.poses.append(pose)
+        
+        self.get_logger().info(f"{CYAN}Pose initialized - x: {x}, y: {y}, z: {z}{RESET}")
+
+        return pose_array
+    
+    def yolo_arm_controll(self):
+        arm_client = TurtlebotArmClient()
+
+        print ("task start!")
+        print(f"Get coordinates: {self.yolo_x}, {self.yolo_y}")
+
+        if self.yolofind:
+            self.armrun = True
+
+            response = arm_client.send_request(2, "open")
+            arm_client.get_logger().info(f'Response: {response.response}')
+            time.sleep(1)
+
+            pose_array = self.append_pose_init(0.137496 - self.yolo_y + 0.05,0.00 - self.yolo_x ,0.122354 )
+
+            response = arm_client.send_request(0, "", pose_array)
+            arm_client.get_logger().info(f'Response: {response.response}')
+
+            pose_array = self.append_pose_init(0.137496 - self.yolo_y + 0.05,0.00 - self.yolo_x ,0.087354  )
+
+            response = arm_client.send_request(0, "", pose_array)
+            arm_client.get_logger().info(f'Response: {response.response}')     
+
+            response = arm_client.send_request(2, "close")
+            arm_client.get_logger().info(f'Response: {response.response}')
+   
+            response = arm_client.send_request(1, "home2")
+            arm_client.get_logger().info(f'Response: {response.response}')
+            time.sleep(1)
+
+            print ("conveyor task start")
+
+            response = arm_client.send_request(1, "conveyor_up")
+            arm_client.get_logger().info(f'Response: {response.response}')
+
+            response = arm_client.send_request(1, "test_conveyor")
+            arm_client.get_logger().info(f'Response: {response.response}')
+
+            response = arm_client.send_request(2, "open")
+            arm_client.get_logger().info(f'Response: {response.response}')
+
+            print("throw ")
+            
+            response = arm_client.send_request(1, "conveyor_up")
+            arm_client.get_logger().info(f'Response: {response.response}')
+
+            response = arm_client.send_request(1, "camera_home")
+            arm_client.get_logger().info(f'Response: {response.response}')    
+
+            time.sleep(3)
+
+            print("jobs_done")
+
+            self.armrun = False
+            self.yolofind = False  # 작업 완료 후 초기화
+            
+            self.count += 1
+            
+    def aroco_Block_status(self,state):
         self.target_marker_id = 0
-        running = True
-        while running:
+        while True:
             if not self.SUBSCRIPTION_MARKER:
-                return
-            
-            for self.marker in self.SUBSCRIPTION_MARKER:
-                if self.marker.id == self.target_marker_id:
-                    # self.get_logger().debug(f'Marker ID: {marker.id}, PositionZ: {marker.pose.pose.position.z}')
-                    print(f'z:[{self.marker.pose.pose.position.z}] x:[{self.marker.pose.pose.position.x}] ')
-                    # if marker.pose.pose.position.z > 0.30:
-                    if self.marker.pose.pose.position.z > 0.467:
-                        self.publish_cmd_vel(0.10)
-                    elif self.marker.pose.pose.position.z > 0.30:
-                        self.publish_cmd_vel(0.06)
-                    elif self.marker.pose.pose.position.z > 0.20 :
-                        self.publish_cmd_vel(0.04)
-                    else:
+                continue
+            if state != self.state:
+                break
+        
+            for marker in self.SUBSCRIPTION_MARKER:
+                if marker.id == self.target_marker_id:
+                    self.marker_id = marker.id
+                    self.aruco_pose = marker.pose.pose  # Aruco의 위치 저장
+                    self.get_logger().info(f'Marker ID: {marker.id}, PositionZ: {self.aruco_pose.position.z}')
+                    self.aruco_marker_found = True
+                    if self.state ==  'ARUCO':
+                        self.execute_forward_task(self.aruco_pose.position.z)  # 전진 작업 실행
+                    elif self.state == 'BACKWARD':
+                        self.execute_backward_task(self.aruco_pose.position.z)
+                        
+                if self.state == 'CHECK':
+                    marker_id = marker.id
+                    x_position = marker.pose.pose.position.x
+                    if marker_id == self.GUI_COMMAND['goal'] and abs(x_position) <= 0.05:  # marker3을 가까이서 감지하면 정지
+                        print("find")
                         self.publish_cmd_vel(0.0)
-                        self.finish_move = True
-                    break
-            time.sleep(0.2)
-            
-    def check_Block_Place(self,block_id):
-        pass
-        return "1"
-    def pick_Block_Place(self,pick_place):
-        pass
-    def move_Conveyor_Next(self):
-        pass
-    def move_Conveyor_ALL(self):
-        pass
-    def check_move_Basket(self):
-        pass
-    def pick_Basket(self):
-        pass
-    def check_move_aroco(self):
-        pass
-    def put_aroco(self):
-        pass
+                        self.final_task()
+                    else:  # 어떤 marker든 감지되면 전진
+                        print("keep run")
+                        self.publish_cmd_vel(0.03)
+                        
+    def final_task(self):
+        arm_client = TurtlebotArmClient()
+        response = arm_client.send_request(1, "box_back_put")
+        arm_client.get_logger().info(f'Response: {response.response}') 
+        time.sleep(1)
+        response = arm_client.send_request(2, "open")
+        arm_client.get_logger().info(f'Response: {response.response}')       
+        self.state = "FINISH"
+    
     def sub_conveyor_status_callback(self, msg):
         """컨베이어 상태를 확인하는 콜백 함수"""
         self.CONVEYOR_STATUS = msg.data.strip()
         if self.DEBUG:
             self.get_logger().info(f"[컨베이어 상태] 현재 상태: {self.CONVEYOR_STATUS}")
+            
+    def execute_forward_task(self, current_z_position):
+        # 전진 작업: 30cm까지 전진 후 멈추고, 작업을 진행
+        if self.aruco_marker_found and self.aruco_pose:
+            self.get_logger().info("Executing forward task...")
+            # 목표 z축 위치를 30cm로 설정
+            if current_z_position > 0.3:
+                self.publish_cmd_vel(0.05)
+            elif current_z_position > 0.25:
+                self.publish_cmd_vel(0.025)
+            else:
+                self.publish_cmd_vel(0.0)
+                self.get_logger().info("Target reached")
+                self.camera_arm_controll()
+                self.state = 'YOLO'
 
+                
+    def execute_backward_task(self, current_z_position):
+        # 후진 작업: 1m만큼 후진하고 다시 Aruco marker를 확인
+        if self.aruco_marker_found and self.aruco_pose:
+            self.get_logger().info("Executing backward task...")
+            # 목표 z축 위치를 30cm로 설정
+            if current_z_position < 0.98:
+                self.publish_cmd_vel(-0.05)
+            else:
+                self.publish_cmd_vel(0.0)
+                self.get_logger().info("Target reached")
+                self.box_home_arm_controll()
+                self.state = 'PURPLE'
+                
+    def box_home_arm_controll(self):
+        arm_client = TurtlebotArmClient()
+        response = arm_client.send_request(1, "box_home_01")
+        arm_client.get_logger().info(f'Response: {response.response}')
+        time.sleep(3)      
+                   
+    def camera_arm_controll(self):
+        arm_client = TurtlebotArmClient()
+        response = arm_client.send_request(1, "camera_home")
+        arm_client.get_logger().info(f'Response: {response.response}')
+        time.sleep(3)        
+        
+      
     def sub_object_detection_callback(self, msg):
         """객체 감지 정보를 배열로 변환하고 출력하는 콜백 함수"""
         try:

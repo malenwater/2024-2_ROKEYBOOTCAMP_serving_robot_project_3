@@ -24,20 +24,23 @@ class TurtlebotArmClient(Node):
         if waypoints:
             self.req.waypoints = waypoints
         self.future = self.client.call_async(self.req)
+        print("hi")
         rclpy.spin_until_future_complete(self, self.future)
+        print("hi")
         return self.future.result()
 
 def main(args=None):
     rclpy.init(args=args)
-    parser = argparse.ArgumentParser(description='Send MoveitControl command to TurtlebotArmClient')
-    parser.add_argument('cmd', type=int, help='Command to send (e.g., 0 for waypoints, 1 for named target)')
-    parser.add_argument('posename', type=str, help='Pose name for the command')
-    parsed_args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Send MoveitControl command to TurtlebotArmClient')
+    # parser.add_argument('cmd', type=int, help='Command to send (e.g., 0 for waypoints, 1 for named target)')
+    # parser.add_argument('posename', type=str, help='Pose name for the command')
+    # parsed_args = parser.parse_args()
 
     client = TurtlebotArmClient()
 
     # Example usage
-    response = client.send_request(parsed_args.cmd, parsed_args.posename)
+    # response = client.send_request(parsed_args.cmd, parsed_args.posename)
+    response = client.send_request(1, "camera_home")
     client.get_logger().info(f'Response: {response.response}')
 
     rclpy.shutdown()
