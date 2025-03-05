@@ -56,37 +56,8 @@ class ManagingNode(Node):
         self.target_marker_id = None
         self.marker = []
         self.arm_client = TurtlebotArmClient()
-        # self.subscription_moveit_controller = self.create_subscription(
-        #     String,
-        #     "moveit/status",
-        #     self.sub_moveit_status_callback,
-        #     10
-        # )
-        
-        # self.publisher_moveit_controller = self.create_publisher(
-        #     String,
-        #     'moveit/control',
-        #     10)
         
         self.get_logger().info(f"managing_node 설정 끝")
-     
-    # def sub_moveit_status_callback(self, msg):
-    #     """감지된 MarkerArray 데이터를 처리하는 콜백 함수"""
-    #     self.SUBSCRIPTION_MARKER = msg.markers
-    #     self.get_logger().info(f"[마커 감지] 총 {len(self.SUBSCRIPTION_MARKER)}개의 마커 감지됨.")
-    #     for marker in self.SUBSCRIPTION_MARKER:
-    #         self.get_logger().info(f" - 마커 ID: {marker.id}, 위치: ({marker.pose.position.x}, {marker.pose.position.y}, {marker.pose.position.z})")
-
-    # def publish_moveit_control(self,control : String, distance : float):
-    #     # 퍼블리시할 메시지 생성 (예: 'go' 명령)
-    #     control_message = {
-    #                         "control" : control,
-    #                         "distance.mm" : distance,
-    #                        }
-    #     msg = String()
-    #     msg.data = json.dumps(control_message)
-    #     self.publisher_conveyor.publish(msg)
-    #     self.get_logger().info(f"퍼블리시된 메시지: {msg.data}")
         
     def publish_control_conveyor(self,control : String, distance : float):
         # 퍼블리시할 메시지 생성 (예: 'go' 명령)
@@ -152,12 +123,15 @@ class ManagingNode(Node):
         self.target_marker_id = 0
         running = True
         while running:
+            if not self.SUBSCRIPTION_MARKER:
+                return
+            
             for self.marker in self.SUBSCRIPTION_MARKER:
                 if self.marker.id == self.target_marker_id:
                     # self.get_logger().debug(f'Marker ID: {marker.id}, PositionZ: {marker.pose.pose.position.z}')
                     print(f'z:[{self.marker.pose.pose.position.z}] x:[{self.marker.pose.pose.position.x}] ')
                     # if marker.pose.pose.position.z > 0.30:
-                    if self.marker.pose.pose.position.z > 0.40:
+                    if self.marker.pose.pose.position.z > 0.467:
                         self.publish_cmd_vel(0.10)
                     elif self.marker.pose.pose.position.z > 0.30:
                         self.publish_cmd_vel(0.06)
@@ -220,6 +194,30 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
+
+# 위에서 보는 값 [0.0, -0.05522330836388308, -0.4049709280018093, 1.9987769666149904] 
+
+# arm_client.send_request(2, "open")
+# arm_client.send_request(2, "close")
+# arm_client.send_request(0, "", pose_array)
+# arm_client.send_request(3, "", pose_array)
+
+# arm_client.send_request(1, "home1")
+# arm_client.send_request(1, "home2")
+
+# arm_client.send_request(1, "conveyor_up")
+# arm_client.send_request(1, "conveyor_down")
+# arm_client.send_request(1, "camera_home")
+# arm_client.send_request(1, "test_conveyor")
+# arm_client.send_request(1, "box_home_01")
+
+# arm_client.send_request(1, "box_up_01")
+# arm_client.send_request(1, "box_up_02")
+# arm_client.send_request(1, "box_up_03")
+# arm_client.send_request(1, "box_front")
+# arm_client.send_request(1, "box_back_01")
+# arm_client.send_request(1, "box_back_put")
 
 if __name__ == "__main__":
     main()
