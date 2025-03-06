@@ -20,9 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'ConveyorBelt = factory.ConveyorSerialController:main',
-            'GUI = factory.GUI_Node:main',
-            'cam = factory.cam_publish:main',
+            'ConveyorBelt = factory.conveyor.ConveyorSerialController:main',
+            'GUI = factory.gui.GUI_Node:main',
         ],
     },
 )

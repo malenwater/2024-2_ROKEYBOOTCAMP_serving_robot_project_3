@@ -3,7 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Pose, PoseArray
 from aruco_msgs.msg import MarkerArray 
-from srv_call_test import TurtlebotArmClient
+from ws.src.factory.factory.manage.srv_call_test import TurtlebotArmClient
 import ast  # 문자열을 리스트로 변환하기 위한 라이브러리
 import json
 import time
