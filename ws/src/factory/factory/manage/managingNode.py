@@ -177,7 +177,8 @@ class ManagingNode(Node):
     def task_done_callback(self):
         # 작업이 끝났을 때 호출될 콜백 함수
         self.get_logger().info(f'[작업 완료] run_task가 끝났습니다.')
-    
+        self.WORKING = False
+        
     def publish_cmd_vel(self, linear_x):
         self.twist.linear.x = linear_x
         self.twist.angular.z = 0.0
