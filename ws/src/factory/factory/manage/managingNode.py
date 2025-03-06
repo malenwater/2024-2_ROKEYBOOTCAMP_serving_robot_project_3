@@ -3,7 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist, Pose, PoseArray
 from aruco_msgs.msg import MarkerArray 
-from ws.src.factory.factory.manage.srv_call_test import TurtlebotArmClient
+from .srv_call_test import TurtlebotArmClient
 import ast  # 문자열을 리스트로 변환하기 위한 라이브러리
 import json
 import time
@@ -74,7 +74,7 @@ class ManagingNode(Node):
         self.block_ids = []
         self.len_block_ids = 0
         # 파일 경로 설정
-        file_path = '/mnt/sda1/rokey_project/8week/2024-2_ROKEYBOOTCAMP_serving_robot_project_3/ws/src/factory/factory/offset_values.txt'
+        file_path = '/mnt/sda1/rokey_project/8week/2024-2_ROKEYBOOTCAMP_serving_robot_project_3/ws/src/factory/factory/manage/offset_values.txt'
 
         if os.path.exists(file_path):
             self.get_logger().info(f"read txt")
@@ -263,6 +263,7 @@ class ManagingNode(Node):
                                     self.home2_arm_controll()
                                     self.state = 'BACKWARD'
                                     self.count = 0
+                                    self.publish_control_conveyor("go",1000.0)
                         
                         elif self.state == 'PURPLE':
                             if not self.yolofind and abs(self.yolo_x) < 0.01:
@@ -295,7 +296,7 @@ class ManagingNode(Node):
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
 
-                pose_array = self.append_pose_init(0.0103589 ,-0.2700000  ,0.205779  - self.yolo_y + 0.06 )
+                pose_array = self.append_pose_init(0.00413404, -0.269808, 0.163616)
 
                 response = arm_client.send_request(3, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')
@@ -303,7 +304,8 @@ class ManagingNode(Node):
                 response = arm_client.send_request(9, "")
                 arm_client.get_logger().info(f'Response: {response.response}')
 
-                pose_array = self.append_pose_init(0.0103589,-0.3000000   ,0.205779  - self.yolo_y + 0.06 )
+                pose_array = self.append_pose_init(0.00143898, -0.344128, 0.272484)
+                # pose_array = self.append_pose_init(0.00143898, -0.344128, 0.242484)
 
                 response = arm_client.send_request(3, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')     
@@ -314,24 +316,38 @@ class ManagingNode(Node):
                 response = arm_client.send_request(2, "close")
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
-                # =====================================
-                response = arm_client.send_request(1, "box_up_01")
-                arm_client.get_logger().info(f'Response: {response.response}')    
+                # ++++++++++++
+                pose_array = self.append_pose_init(0.00248397, -0.28187, 0.354011)
+                response = arm_client.send_request(3, "", pose_array)
+                arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
-
-                response = arm_client.send_request(1, "box_up_02")
-                arm_client.get_logger().info(f'Response: {response.response}')    
-                time.sleep(1)
-
+                
                 response = arm_client.send_request(1, "box_up_03")
                 arm_client.get_logger().info(f'Response: {response.response}')    
                 time.sleep(1)
-                # =====================================
-
+                
                 response = arm_client.send_request(1, "box_back_01")
                 arm_client.get_logger().info(f'Response: {response.response}')   
-
                 time.sleep(1)
+                
+                # # =====================================
+                # response = arm_client.send_request(1, "box_up_01")
+                # arm_client.get_logger().info(f'Response: {response.response}')    
+                # time.sleep(1)
+
+                # response = arm_client.send_request(1, "box_up_02")
+                # arm_client.get_logger().info(f'Response: {response.response}')    
+                # time.sleep(1)
+
+                # response = arm_client.send_request(1, "box_up_03")
+                # arm_client.get_logger().info(f'Response: {response.response}')    
+                # time.sleep(1)
+                # # =====================================
+
+                # response = arm_client.send_request(1, "box_back_01")
+                # arm_client.get_logger().info(f'Response: {response.response}')   
+
+                # time.sleep(1)
 
 
                 print("jobs_done")
@@ -424,6 +440,7 @@ class ManagingNode(Node):
             response = arm_client.send_request(1, "camera_home")
             arm_client.get_logger().info(f'Response: {response.response}')    
 
+            self.publish_control_conveyor("go",100.0)
             time.sleep(3)
 
             print("jobs_done")
@@ -467,11 +484,27 @@ class ManagingNode(Node):
                         
     def final_task(self):
         arm_client = TurtlebotArmClient()
-        response = arm_client.send_request(1, "box_back_put")
-        arm_client.get_logger().info(f'Response: {response.response}') 
+        
+        response = arm_client.send_request(1, "box_back_put_1")
+        arm_client.get_logger().info(f'Response: {response.response}')
         time.sleep(1)
+        
         response = arm_client.send_request(2, "open")
-        arm_client.get_logger().info(f'Response: {response.response}')       
+        arm_client.get_logger().info(f'Response: {response.response}')  
+        time.sleep(1)
+        
+        response = arm_client.send_request(1, "box_back_put_2")
+        arm_client.get_logger().info(f'Response: {response.response}')
+        time.sleep(1)
+        
+        response = arm_client.send_request(1, "home2")
+        arm_client.get_logger().info(f'Response: {response.response}')  
+        
+        # response = arm_client.send_request(1, "box_back_put_1")
+        # arm_client.get_logger().info(f'Response: {response.response}') 
+        # time.sleep(1)
+        # response = arm_client.send_request(2, "open")
+        # arm_client.get_logger().info(f'Response: {response.response}')       
         self.state = "FINISH"
     
     def sub_conveyor_status_callback(self, msg):
@@ -494,7 +527,6 @@ class ManagingNode(Node):
                 self.get_logger().info("Target reached")
                 self.camera_arm_controll()
                 self.state = 'YOLO'
-
                 
     def execute_backward_task(self, current_z_position):
         # 후진 작업: 1m만큼 후진하고 다시 Aruco marker를 확인
