@@ -1,0 +1,2 @@
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+/bin/python3 /mnt/sda1/rokey_project/8week/2024-2_ROKEYBOOTCAMP_serving_robot_project_3/turtlebot/filtered_rosbridge.py

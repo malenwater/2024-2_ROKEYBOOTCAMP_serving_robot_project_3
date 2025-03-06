@@ -8,6 +8,7 @@ import ast  # 문자열을 리스트로 변환하기 위한 라이브러리
 import json
 import time
 import os
+import threading
 
 # ANSI 색상 코드 정의
 RED = "\033[91m"
@@ -22,7 +23,7 @@ class ManagingNode(Node):
     def __init__(self):
         super().__init__("managing_node")
         self.get_logger().info(f"managing_node 시작")
-        self.DEBUG = True
+        self.DEBUG = False
         self.WORKING = False
         self.ID_CLASS = [0, 1, 2]
         # 사용자 입력 처리 (gui/command 토픽)
@@ -73,9 +74,10 @@ class ManagingNode(Node):
         self.block_ids = []
         self.len_block_ids = 0
         # 파일 경로 설정
-        file_path = './offset_values.txt'
+        file_path = '/mnt/sda1/rokey_project/8week/2024-2_ROKEYBOOTCAMP_serving_robot_project_3/ws/src/factory/factory/offset_values.txt'
 
         if os.path.exists(file_path):
+            self.get_logger().info(f"read txt")
             with open(file_path, "r") as file:
                 for line in file:
                     # 각 줄을 "변수명 : 값" 형식으로 분리하여 변수에 값을 넣음
@@ -103,8 +105,10 @@ class ManagingNode(Node):
                                 self.left_high_y_offset = value
                         except ValueError:
                             pass
+        
         self.state = "START"
-        response = self.arm_client.send_request(1, "camera_home")
+        self.get_logger().info(f"camera_home 시작")
+        response = self.arm_client.send_request(1, "home2")
         self.get_logger().info(f'Response: {response.response}')
         
         self.get_logger().info(f"managing_node 설정 끝")
@@ -136,23 +140,43 @@ class ManagingNode(Node):
             self.block_ids = [0] * int(self.GUI_COMMAND['red']) + [1] * int(self.GUI_COMMAND['blue'])
             self.len_block_ids = len(self.block_ids)
 
-            self.state = 'ARUCO'
-            self.aroco_Block_status(self.state)
-            # self.state = 'YOLO'
-            self.yolo_status(self.state)
-            # self.state = 'BACKWARD'
-            self.aroco_Block_status(self.state)
-            # self.state = 'PURPLE'
-            self.yolo_status(self.state)
-            # self.state = 'CHECK'
-            self.aroco_Block_status(self.state)
-            self.get_logger().info(f'Response: {self.state}')
-
+            # run_task를 쓰레드로 실행
+            self.get_logger().info(f"유저 입력에 따른 쓰레드 시작")
+            task_thread = threading.Thread(target=self.run_task, args=(self.task_done_callback,))
+            task_thread.start()
+            self.get_logger().info(f"유저 입력에 따른 쓰레드 시작")
             
         except Exception as e:
             self.get_logger().error(f"[사용자 입력] 명령 해석 실패: {e}")
-        finally:
-            self.WORKING = False
+            
+    def run_task(self, callback):
+        self.state = 'ARUCO'
+        self.get_logger().info(f'YOLO self.state: {self.state}')
+        self.aroco_Block_status(self.state)
+        
+        self.state = 'YOLO'
+        self.get_logger().info(f'YOLO self.state: {self.state}')
+        self.yolo_status(self.state)
+        
+        self.state = 'BACKWARD'
+        self.get_logger().info(f'BACKWARD self.state: {self.state}')
+        self.aroco_Block_status(self.state)
+        
+        self.state = 'PURPLE'
+        self.get_logger().info(f'PURPLE self.state: {self.state}')
+        self.yolo_status(self.state)
+        
+        self.state = 'CHECK'
+        self.get_logger().info(f'self.state: {self.state}')
+        self.aroco_Block_status(self.state)
+        self.get_logger().info(f'self.state: {self.state}')
+
+        # 작업이 끝난 후 콜백 함수 호출
+        callback()
+        
+    def task_done_callback(self):
+        # 작업이 끝났을 때 호출될 콜백 함수
+        self.get_logger().info(f'[작업 완료] run_task가 끝났습니다.')
     
     def publish_cmd_vel(self, linear_x):
         self.twist.linear.x = linear_x
@@ -160,12 +184,14 @@ class ManagingNode(Node):
         self.cmd_vel_publisher.publish(self.twist)  
         
     def check_pose(self,data_list):
+        # self.get_logger().info(f"check_pose: start")
         pose = {
             "1" : [],
             "2" : [],
             "3" : [],
             "4" : [],
         }
+        
         for data in data_list:
             if data[1] > 0 and data[2] > 0:
                 pose["1"] =  data
@@ -175,22 +201,35 @@ class ManagingNode(Node):
                 pose["3"] =  data
             elif data[1] < 0 and data[2] < 0:
                 pose["4"] =  data
+        # self.get_logger().info(f"{pose}")
+        # self.get_logger().info(f"check_pose: end")
         return pose
     
     def choose_block(self,data_list):
+        # self.get_logger().info(f"choose_block: start")
         data_pose = self.check_pose(data_list)
-        pick_data = self.block_ids[self.count][0]
-        if data_pose["1"][0] == pick_data:
-            return data_pose["1"]
-        elif data_pose["2"][0] == pick_data:
-            return data_pose["2"]
-        elif data_pose["3"][0] == pick_data:
-            return data_pose["3"]
-        elif data_pose["4"][0] == pick_data:
-            return data_pose["4"]
-        return data_list
+        # self.get_logger().info(f"choose_block: {data_pose}")
+        pick_data = self.block_ids[self.count]
+        # self.get_logger().info(f"choose_block: {pick_data}")
+        # self.get_logger().info(f"choose_block: {data_pose['1'][0]}")
+        # self.get_logger().info(f"choose_block: {not data_pose['1'] and data_pose['1'][0] == pick_data}")
+        # self.get_logger().info(f"choose_block: end")
+        if data_pose["1"] and data_pose["1"][0] == pick_data:
+            # self.get_logger().info(f"choose_block: {data_pose['1']}")
+            return data_pose["1"], "1"
+        elif data_pose["2"] and data_pose["2"][0] == pick_data:
+            # self.get_logger().info(f"choose_block: {data_pose['2']}")
+            return data_pose["2"], "2"
+        elif data_pose["3"] and data_pose["3"][0] == pick_data:
+            # self.get_logger().info(f"choose_block: {data_pose['3']}")
+            return data_pose["3"], "3"
+        elif data_pose["4"] and data_pose["4"][0] == pick_data:
+            # self.get_logger().info(f"choose_block: {data_pose['4']}")
+            return data_pose["4"], "4"
+        return None
     
     def yolo_status(self,state):
+        state = "".join(state)  
         while True:
             if self.YOLO_DETECTED_INFO is None:
                 continue
@@ -201,18 +240,25 @@ class ManagingNode(Node):
                 try:
                     data_list = self.YOLO_DETECTED_INFO
                     if len(data_list) > 0:
-                        data_list = self.choose_block(data_list)
-                        self.yolo_x = data_list[1]
-                        self.yolo_y = data_list[2]
+                        # self.get_logger().info(f"Detected coordinates __ before: {data_list}")
+                        if self.state == 'YOLO':
+                            data_list = self.choose_block(data_list)
+                            if data_list is None:
+                                continue
+                            self.get_logger().info(f"Detected coordinates __ middle: {data_list}")
+                            self.pose_id = data_list[1]
+                            self.yolo_x = data_list[0][1]
+                            self.yolo_y = data_list[0][2]
+                        else:
+                            self.yolo_x = data_list[0][1]
+                            self.yolo_y = data_list[0][2]
                         
-                        print(f"Detected coordinates: {self.yolo_x}, {self.yolo_y}")
-                        print("done")
+                        # self.get_logger().info(f"Detected coordinates: __ after {self.yolo_x}, {self.yolo_y}")
 
                         if self.state == 'YOLO':
                             if not self.yolofind:
                                 self.yolofind = True
-                                self.yolo_arm_controll()
-                                
+                                self.yolo_arm_controll(self.pose_id)
                                 if self.count == self.len_block_ids:
                                     self.home2_arm_controll()
                                     self.state = 'BACKWARD'
@@ -229,6 +275,7 @@ class ManagingNode(Node):
                                 self.publish_cmd_vel(0.01)                      
                                 
                 except Exception as e:
+                    time.sleep(1)
                     self.get_logger().error(f"Error processing the data: {e}")
             else:
                 time.sleep(0.2)
@@ -236,7 +283,6 @@ class ManagingNode(Node):
     def purple_arm_control(self):
         if self.state == 'PURPLE':
             arm_client = TurtlebotArmClient()
-
 
             print ("task start!")
             
@@ -268,7 +314,7 @@ class ManagingNode(Node):
                 response = arm_client.send_request(2, "close")
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
-
+                # =====================================
                 response = arm_client.send_request(1, "box_up_01")
                 arm_client.get_logger().info(f'Response: {response.response}')    
                 time.sleep(1)
@@ -280,6 +326,7 @@ class ManagingNode(Node):
                 response = arm_client.send_request(1, "box_up_03")
                 arm_client.get_logger().info(f'Response: {response.response}')    
                 time.sleep(1)
+                # =====================================
 
                 response = arm_client.send_request(1, "box_back_01")
                 arm_client.get_logger().info(f'Response: {response.response}')   
@@ -314,11 +361,25 @@ class ManagingNode(Node):
 
         return pose_array
     
-    def yolo_arm_controll(self):
+    def yolo_arm_controll(self,pose_id):
         arm_client = TurtlebotArmClient()
-
+        
         print ("task start!")
-        print(f"Get coordinates: {self.yolo_x}, {self.yolo_y}")
+        if pose_id == "1":
+            pose_array_1 = self.append_pose_init(0.17246755169677735, -0.06311327871093751, 0.122354)
+            pose_array_2 = self.append_pose_init(0.17246755169677735, -0.06311327871093751, 0.095354)
+        elif pose_id == "2":
+            pose_array_1 = self.append_pose_init(0.23424655453491214, -0.06209879458007812, 0.122354)
+            pose_array_2 = self.append_pose_init(0.23424655453491214, -0.06209879458007812, 0.095354)
+            pass
+        elif pose_id == "3":
+            pose_array_1 = self.append_pose_init(0.17682907739257814, 0.06645133278808593, 0.122354)
+            pose_array_2 = self.append_pose_init(0.17682907739257814, 0.06645133278808593, 0.095354)
+            pass
+        elif pose_id == "4":
+            pose_array_1 = self.append_pose_init(0.2389241781616211, 0.06358921300048828, 0.122354)
+            pose_array_2 = self.append_pose_init(0.2389241781616211, 0.06358921300048828, 0.095354)
+        print ("task start!")
 
         if self.yolofind:
             self.armrun = True
@@ -327,14 +388,14 @@ class ManagingNode(Node):
             arm_client.get_logger().info(f'Response: {response.response}')
             time.sleep(1)
 
-            pose_array = self.append_pose_init(0.137496 - self.yolo_y + 0.05,0.00 - self.yolo_x ,0.122354 )
+            # pose_array = self.append_pose_init(0.14 - yolo_robot_x + 0.055 + 0.01, 0.0 - yolo_robot_y * 1.2, 0.122354 )
 
-            response = arm_client.send_request(0, "", pose_array)
+            response = arm_client.send_request(0, "", pose_array_1)
             arm_client.get_logger().info(f'Response: {response.response}')
 
-            pose_array = self.append_pose_init(0.137496 - self.yolo_y + 0.05,0.00 - self.yolo_x ,0.087354  )
+            # pose_array = self.append_pose_init(0.14 - yolo_robot_x + 0.055 + 0.01, 0.0 - yolo_robot_y * 1.2, 0.122354 )
 
-            response = arm_client.send_request(0, "", pose_array)
+            response = arm_client.send_request(0, "", pose_array_2)
             arm_client.get_logger().info(f'Response: {response.response}')     
 
             response = arm_client.send_request(2, "close")
@@ -373,9 +434,11 @@ class ManagingNode(Node):
             self.count += 1
             
     def aroco_Block_status(self,state):
+        state = "".join(state)  
         self.target_marker_id = 0
         while True:
             if not self.SUBSCRIPTION_MARKER:
+                time.sleep(0.2)
                 continue
             if state != self.state:
                 break
@@ -422,9 +485,9 @@ class ManagingNode(Node):
         if self.aruco_marker_found and self.aruco_pose:
             self.get_logger().info("Executing forward task...")
             # 목표 z축 위치를 30cm로 설정
-            if current_z_position > 0.3:
+            if current_z_position > 0.366:
                 self.publish_cmd_vel(0.05)
-            elif current_z_position > 0.25:
+            elif current_z_position > 0.256:
                 self.publish_cmd_vel(0.025)
             else:
                 self.publish_cmd_vel(0.0)
@@ -481,12 +544,25 @@ class ManagingNode(Node):
                 self.get_logger().info(
                     f" - 마커 ID: {marker.id}, 위치: ({marker.pose.pose.position.x}, {marker.pose.pose.position.y}, {marker.pose.pose.position.z})"
                 )
+
 def main(args=None):
     rclpy.init(args=args)
+
+    # 노드 생성
     node = ManagingNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+
+    # 멀티스레드 Executor 설정
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(node)
+
+    # executor를 사용하여 노드 실행
+    try:
+        executor.spin()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 # 위에서 보는 값 [0.0, -0.05522330836388308, -0.4049709280018093, 1.9987769666149904] 

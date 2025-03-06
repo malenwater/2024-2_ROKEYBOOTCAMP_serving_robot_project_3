@@ -24,9 +24,7 @@ class TurtlebotArmClient(Node):
         if waypoints:
             self.req.waypoints = waypoints
         self.future = self.client.call_async(self.req)
-        print("hi")
         rclpy.spin_until_future_complete(self, self.future)
-        print("hi")
         return self.future.result()
 
 def main(args=None):
@@ -40,7 +38,8 @@ def main(args=None):
 
     # Example usage
     # response = client.send_request(parsed_args.cmd, parsed_args.posename)
-    response = client.send_request(1, "camera_home")
+    # response = client.send_request(2, "open")
+    response = client.send_request(2, "close")
     client.get_logger().info(f'Response: {response.response}')
 
     rclpy.shutdown()
