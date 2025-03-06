@@ -15,10 +15,6 @@ import os
 import numpy as np
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = "/usr/lib/x86_64-linux-gnu/qt5/plugins" #적절한 경로로 수정 필요
 os.environ["QT_QPA_PLATFORM"] = "xcb" #기본 플랫폼 설정(본인이 사용하려는 플랫폼으로 설정)
-# HEIGHT = 720
-# WIDTH = 1280
-HEIGHT = 360
-WIDTH = 640
 class ConveyorController(Node, QObject):
     status_signal = pyqtSignal(str)
     image_signal = pyqtSignal(object)
@@ -32,7 +28,7 @@ class ConveyorController(Node, QObject):
         self.subscription = self.create_subscription(String, 'conveyor/status', self.status_callback, 10)
         self.image_subscription = self.create_subscription(CompressedImage, 'yolo/compressed', self.image_callback, 10)
         self.bridge = CvBridge()
-
+    
     def send_command(self, control):
         command_dict = {
             "control": control,
@@ -71,7 +67,7 @@ class ConveyorController(Node, QObject):
             cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
             # 400x300으로 리사이즈
-            resized_image = cv2.resize(cv_image, (WIDTH, HEIGHT))
+            resized_image = cv2.resize(cv_image, (640, 360))
 
             # OpenCV 이미지 신호 전송
             self.image_signal.emit(resized_image)
@@ -106,18 +102,18 @@ class ConveyorGUI(QWidget):
         self.button_exit.clicked.connect(self.close_application)
         self.red_label = QLabel("빨간 물체 개수:")
         self.red_combo = QComboBox()
-        self.red_combo.addItems([str(i) for i in range(10)])
+        self.red_combo.addItems([str(i) for i in range(3)])
         
         self.blue_label = QLabel("파란 물체 개수:")
         self.blue_combo = QComboBox()
-        self.blue_combo.addItems([str(i) for i in range(10)])
+        self.blue_combo.addItems([str(i) for i in range(3)])
         self.goal_label = QLabel("목표 위치:")
         self.goal_combo = QComboBox()
         self.goal_combo.addItems([str(i) for i in range(1, 4)])
         self.button_execute.clicked.connect(self.execute_command)
         self.camera_label = QLabel("카메라 피드 없음")
         self.camera_label.setStyleSheet("border: 1px solid black; background-color: black;")
-        self.camera_label.setFixedSize(WIDTH, HEIGHT)
+        self.camera_label.setFixedSize(640, 360)
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.button_start)
         button_layout.addWidget(self.button_stop)
