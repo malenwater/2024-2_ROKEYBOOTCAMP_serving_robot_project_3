@@ -296,7 +296,8 @@ class ManagingNode(Node):
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
 
-                pose_array = self.append_pose_init(0.00413404, -0.269808, 0.163616)
+                # pose_array = self.append_pose_init(0.00413404, -0.269808, 0.163616)
+                pose_array = self.append_pose_init(0.00413404, -0.269808, 0.202484)
 
                 response = arm_client.send_request(3, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')
@@ -304,7 +305,7 @@ class ManagingNode(Node):
                 response = arm_client.send_request(9, "")
                 arm_client.get_logger().info(f'Response: {response.response}')
 
-                pose_array = self.append_pose_init(0.00143898, -0.344128, 0.272484)
+                pose_array = self.append_pose_init(0.00143898, -0.344128, 0.262484)
                 # pose_array = self.append_pose_init(0.00143898, -0.344128, 0.242484)
 
                 response = arm_client.send_request(3, "", pose_array)
@@ -317,7 +318,7 @@ class ManagingNode(Node):
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
                 # ++++++++++++
-                pose_array = self.append_pose_init(0.00248397, -0.28187, 0.354011)
+                pose_array = self.append_pose_init(0.00248397, -0.28187, 0.374011)
                 response = arm_client.send_request(3, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
@@ -426,7 +427,7 @@ class ManagingNode(Node):
             response = arm_client.send_request(1, "conveyor_up")
             arm_client.get_logger().info(f'Response: {response.response}')
 
-            response = arm_client.send_request(1, "test_conveyor")
+            response = arm_client.send_request(1, "conveyor_down")
             arm_client.get_logger().info(f'Response: {response.response}')
 
             response = arm_client.send_request(2, "open")
@@ -520,7 +521,7 @@ class ManagingNode(Node):
             # 목표 z축 위치를 30cm로 설정
             if current_z_position > 0.366:
                 self.publish_cmd_vel(0.05)
-            elif current_z_position > 0.256:
+            elif current_z_position > 0.248:
                 self.publish_cmd_vel(0.025)
             else:
                 self.publish_cmd_vel(0.0)

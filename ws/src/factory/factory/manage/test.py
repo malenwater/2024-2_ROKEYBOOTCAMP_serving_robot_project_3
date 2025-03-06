@@ -18,12 +18,18 @@ def main():
     rclpy.init()  # rclpy 초기화
 
     arm_client = TurtlebotArmClient()
-    response = arm_client.send_request(1, "box_up_03")
-    arm_client.get_logger().info(f'Response: {response.response}')    
-    response = arm_client.send_request(1, "box_back_01")
-    arm_client.get_logger().info(f'Response: {response.response}')    
     
-    # pose_array = append_pose_init(0.0192283, -0.27712, 0.284794)
+    # response = arm_client.send_request(1, "box_back_put_1")
+    # arm_client.get_logger().info(f'Response: {response.response}')   
+    # response = arm_client.send_request(1, "box_back_put_2")
+    # arm_client.get_logger().info(f'Response: {response.response}')   
+    
+    # response = arm_client.send_request(1, "box_up_03")
+    # arm_client.get_logger().info(f'Response: {response.response}')    
+    # response = arm_client.send_request(1, "box_back_01")
+    # arm_client.get_logger().info(f'Response: {response.response}')    
+    
+    # pose_array = append_pose_init(0.00248397, -0.28187, 0.374011)
     # response = arm_client.send_request(3, "", pose_array)
     
     # pose_array = self.append_pose_init(0.0103589 ,-0.2700000  ,0.205779)
@@ -50,7 +56,7 @@ def main():
     response = arm_client.send_request(9, "")
     # response = arm_client.send_request(3, "", pose_array)
     # response = arm_client.send_request(2, "close")
-    # response = arm_client.send_request(2, "open")
+    response = arm_client.send_request(2, "open")
     arm_client.get_logger().info(f'Response: {response.response}')     
     
     
