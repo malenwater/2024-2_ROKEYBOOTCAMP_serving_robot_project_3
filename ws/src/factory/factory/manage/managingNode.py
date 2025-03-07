@@ -50,7 +50,7 @@ class ManagingNode(Node):
             self.sub_object_detection_callback,
             10
         )
-        self.YOLO_DETECTED_INFO = None
+        self.YOLO_DETECTED_INFO = []
         # 감지된 MarkerArray 수신 (detected_markers 토픽)
         self.subscription_marker = self.create_subscription(
             MarkerArray,
@@ -63,7 +63,7 @@ class ManagingNode(Node):
             String,
             'conveyor/control',
             10)
-        
+        self.is_BLOCK = False
         self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 2)
         self.twist = Twist()
         self.target_marker_id = None
@@ -208,6 +208,11 @@ class ManagingNode(Node):
         return pose
     
     def choose_block(self,data_list):
+        self.get_logger().info(f"choose_block: {data_list}")
+        if not data_list:
+            self.is_BLOCK = False
+            self.count += 1
+            return []
         # self.get_logger().info(f"choose_block: start")
         data_pose = self.check_pose(data_list)
         # self.get_logger().info(f"choose_block: {data_pose}")
@@ -218,64 +223,79 @@ class ManagingNode(Node):
         # self.get_logger().info(f"choose_block: end")
         if data_pose["1"] and data_pose["1"][0] == pick_data:
             # self.get_logger().info(f"choose_block: {data_pose['1']}")
+            self.is_BLOCK = True
             return data_pose["1"], "1"
         elif data_pose["2"] and data_pose["2"][0] == pick_data:
             # self.get_logger().info(f"choose_block: {data_pose['2']}")
+            self.is_BLOCK = True
             return data_pose["2"], "2"
         elif data_pose["3"] and data_pose["3"][0] == pick_data:
             # self.get_logger().info(f"choose_block: {data_pose['3']}")
+            self.is_BLOCK = True
             return data_pose["3"], "3"
         elif data_pose["4"] and data_pose["4"][0] == pick_data:
             # self.get_logger().info(f"choose_block: {data_pose['4']}")
+            self.is_BLOCK = True
             return data_pose["4"], "4"
-        return None
+        if pick_data == 0:
+            color = "빨강"
+        else:
+            color = "파랑"
+        self.get_logger().info(f"{self.count + 1}번째의 {color} 블럭 집기는 블럭이 없어 실패하였습니다.")
+        self.is_BLOCK = False
+        self.count += 1
+        return []
     
     def yolo_status(self,state):
         state = "".join(state)  
         while True:
-            if self.YOLO_DETECTED_INFO is None:
-                continue
             if state != self.state:
                 break
             
             if not self.armrun:  # 로봇 암이 동작 중이 아니면
                 try:
+                    self.YOLO_DETECTED_INFO = []
+                    time.sleep(1)
                     data_list = self.YOLO_DETECTED_INFO
-                    if len(data_list) > 0:
+                    # if len(data_list) > 0:
                         # self.get_logger().info(f"Detected coordinates __ before: {data_list}")
-                        if self.state == 'YOLO':
-                            data_list = self.choose_block(data_list)
-                            if data_list is None:
-                                continue
+                    if self.state == 'YOLO':
+                        data_list = self.choose_block(data_list)
+                        if data_list is None:
+                            continue
+                        self.get_logger().info(f"Detected coordinates __ middle: out")
+                        if self.is_BLOCK:
                             self.get_logger().info(f"Detected coordinates __ middle: {data_list}")
                             self.pose_id = data_list[1]
                             self.yolo_x = data_list[0][1]
                             self.yolo_y = data_list[0][2]
-                        else:
-                            self.yolo_x = data_list[0][1]
-                            self.yolo_y = data_list[0][2]
-                        
-                        # self.get_logger().info(f"Detected coordinates: __ after {self.yolo_x}, {self.yolo_y}")
+                    else:
+                        self.yolo_x = data_list[0][1]
+                        self.yolo_y = data_list[0][2]
+                    
+                    # self.get_logger().info(f"Detected coordinates: __ after {self.yolo_x}, {self.yolo_y}")
 
-                        if self.state == 'YOLO':
-                            if not self.yolofind:
+                    if self.state == 'YOLO':
+                        if not self.yolofind:
+                            if self.is_BLOCK:
                                 self.yolofind = True
                                 self.yolo_arm_controll(self.pose_id)
-                                if self.count == self.len_block_ids:
-                                    self.home2_arm_controll()
-                                    self.state = 'BACKWARD'
-                                    self.count = 0
-                                    self.publish_control_conveyor("go",1000.0)
-                        
-                        elif self.state == 'PURPLE':
-                            if not self.yolofind and abs(self.yolo_x) < 0.01:
-                                self.publish_cmd_vel(0.0)
-                                self.yolofind = True
-                                self.purple_arm_control()
-                            elif not self.yolofind and self.yolo_x > 0.01:
-                                self.publish_cmd_vel(-0.01)
-                            elif not self.yolofind and self.yolo_x < -0.01:
-                                self.publish_cmd_vel(0.01)                      
+                                
+                            if self.count == self.len_block_ids:
+                                self.home2_arm_controll()
+                                self.state = 'BACKWARD'
+                                self.count = 0
+                                self.publish_control_conveyor("go",1000.0)
+                    
+                    elif self.state == 'PURPLE':
+                        if not self.yolofind and abs(self.yolo_x) < 0.01:
+                            self.publish_cmd_vel(0.0)
+                            self.yolofind = True
+                            self.purple_arm_control()
+                        elif not self.yolofind and self.yolo_x > 0.01:
+                            self.publish_cmd_vel(-0.01)
+                        elif not self.yolofind and self.yolo_x < -0.01:
+                            self.publish_cmd_vel(0.01)                      
                                 
                 except Exception as e:
                     time.sleep(1)
@@ -307,7 +327,7 @@ class ManagingNode(Node):
                 response = arm_client.send_request(9, "")
                 arm_client.get_logger().info(f'Response: {response.response}')
 
-                pose_array = self.append_pose_init(0.00143898, -0.344128, 0.262484)
+                pose_array = self.append_pose_init(0.00143898, -0.344128, 0.250484)
                 # pose_array = self.append_pose_init(0.00143898, -0.344128, 0.242484)
 
                 response = arm_client.send_request(3, "", pose_array)
@@ -481,6 +501,7 @@ class ManagingNode(Node):
             arm_client.get_logger().info(f'Response: {response.response}')    
 
             self.publish_control_conveyor("go",100.0)
+            self.YOLO_DETECTED_INFO = []
             time.sleep(1)
 
             print("jobs_done")
@@ -514,7 +535,7 @@ class ManagingNode(Node):
                 if self.state == 'CHECK':
                     marker_id = marker.id
                     x_position = marker.pose.pose.position.x
-                    if marker_id == self.GUI_COMMAND['goal'] and abs(x_position) <= 0.05:  # marker3을 가까이서 감지하면 정지
+                    if marker_id == self.GUI_COMMAND['goal'] and abs(x_position) <= 0.03:  # marker3을 가까이서 감지하면 정지
                         print("find")
                         self.publish_cmd_vel(0.0)
                         self.final_task()

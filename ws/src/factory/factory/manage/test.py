@@ -23,9 +23,17 @@ def main():
 # # data: '[ [1, 0.070192, -0.041], [0, -0.0574, -0.038704],[1, 0.07134, 0.02378]]'
     arm_client = TurtlebotArmClient()
     response = arm_client.send_request(2, "open")
-    arm_client.get_logger().info(f'Response: {response.response}')  
-    response = arm_client.send_request(1, "camera_home")
-    arm_client.get_logger().info(f'Response: {response.response}')   
+    arm_client.get_logger().info(f'Response: {response.response}') 
+    time.sleep(2) 
+    
+    response = arm_client.send_request(2, "close")
+    arm_client.get_logger().info(f'Response: {response.response}') 
+    time.sleep(2) 
+    
+    # response = arm_client.send_request(1, "camera_home")
+    # arm_client.get_logger().info(f'Response: {response.response}')   
+    
+    
     # response = arm_client.send_request(1, "box_back_put_2")
     # arm_client.get_logger().info(f'Response: {response.response}')   
     
@@ -57,14 +65,15 @@ def main():
 #     # pose_array = append_pose_init(-0.0016946549744881157, -0.05521983269987424, 0.17193338228588664)
     print("1")
     time.sleep(1)
-    pose_array = append_pose_init(0.2559, 0.07075, 0.122354)
-    response = arm_client.send_request(0, "", pose_array)
-    #  x: 0.2554, y: 0.05915, z: 0.100354
-    print("1")
+    # pose_array = append_pose_init(0.2559, 0.07075, 0.122354)
+    # response = arm_client.send_request(0, "", pose_array)
+    # #  x: 0.2554, y: 0.05915, z: 0.100354
+    # print("1")
+    # time.sleep(1)
+    # pose_array = append_pose_init(0.25591600000000003, 0.07075200000000001, 0.089354)
+    # response = arm_client.send_request(0, "", pose_array)
     time.sleep(1)
-    pose_array = append_pose_init(0.25591600000000003, 0.07075200000000001, 0.089354)
-    response = arm_client.send_request(0, "", pose_array)
-    time.sleep(1)
+    
     print("1")
 #     print("5")
     response = arm_client.send_request(9, "")
