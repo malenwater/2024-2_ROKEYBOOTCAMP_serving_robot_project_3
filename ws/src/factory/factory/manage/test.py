@@ -1,7 +1,7 @@
 import rclpy
 from .srv_call_test import TurtlebotArmClient
 from geometry_msgs.msg import Twist, Pose, PoseArray
-
+import time
 def append_pose_init( x,y,z):
     pose_array = PoseArray()
     pose = Pose()
@@ -18,9 +18,10 @@ def main():
     rclpy.init()  # rclpy 초기화
 
     arm_client = TurtlebotArmClient()
-    
-    # response = arm_client.send_request(1, "box_back_put_1")
-    # arm_client.get_logger().info(f'Response: {response.response}')   
+    response = arm_client.send_request(2, "open")
+    arm_client.get_logger().info(f'Response: {response.response}')  
+    response = arm_client.send_request(1, "home2")
+    arm_client.get_logger().info(f'Response: {response.response}')   
     # response = arm_client.send_request(1, "box_back_put_2")
     # arm_client.get_logger().info(f'Response: {response.response}')   
     
@@ -50,14 +51,21 @@ def main():
     
     
 #     # pose_array = append_pose_init(-0.0016946549744881157, -0.05521983269987424, 0.17193338228588664)
-#     pose_array = append_pose_init(0.17246755169677735, -0.06311327871093751, 0.122354)
-#     response = arm_client.send_request(0, "", pose_array)
+    print("1")
+    time.sleep(1)
+    pose_array = append_pose_init(0.17450947229003907, -0.06490245981445313, 0.122354)
+    response = arm_client.send_request(0, "", pose_array)
+    print("1")
+    time.sleep(1)
+    pose_array = append_pose_init(0.17450947229003907, -0.06490245981445313, 0.089354)
+    response = arm_client.send_request(0, "", pose_array)
+    time.sleep(1)
+    print("1")
 #     print("5")
     response = arm_client.send_request(9, "")
     # response = arm_client.send_request(3, "", pose_array)
     # response = arm_client.send_request(2, "close")
-    response = arm_client.send_request(2, "open")
-    arm_client.get_logger().info(f'Response: {response.response}')     
+   
     
     
     # 여러 번 출력하려면 아래와 같이 반복문을 사용할 수 있습니다.

@@ -25,7 +25,7 @@ class ManagingNode(Node):
         self.get_logger().info(f"managing_node 시작")
         self.DEBUG = False
         self.WORKING = False
-        self.IS_TEACHING = True
+        self.IS_TEACHING = False
         self.ID_CLASS = [0, 1, 2]
         # 사용자 입력 처리 (gui/command 토픽)
         self.subscription_command = self.create_subscription(
@@ -385,6 +385,7 @@ class ManagingNode(Node):
         
         print ("task start!")
         if self.IS_TEACHING:
+            print(f'YES TECHING')
             if pose_id == "1":
                 pose_array_1 = self.append_pose_init(0.17246755169677735, -0.06311327871093751, 0.122354)
                 pose_array_2 = self.append_pose_init(0.17246755169677735, -0.06311327871093751, 0.095354)
@@ -400,6 +401,7 @@ class ManagingNode(Node):
                 pose_array_1 = self.append_pose_init(0.2389241781616211, 0.06358921300048828, 0.122354)
                 pose_array_2 = self.append_pose_init(0.2389241781616211, 0.06358921300048828, 0.095354)
         else:
+            print(f'NO TECHING')
             if self.yolo_x > 0 and self.yolo_y > 0:   # right low
                 yolo_robot_y = self.yolo_x + self.right_low_y_offset       # hight  += 아래   -= 위
                 yolo_robot_x = self.yolo_y + self.right_low_x_offset       # width  += 오른쪽 -= 왼쪽
@@ -434,15 +436,22 @@ class ManagingNode(Node):
             if self.IS_TEACHING:
                 response = arm_client.send_request(0, "", pose_array_1)
                 arm_client.get_logger().info(f'Response: {response.response}')
+                time.sleep(1)
                 
                 response = arm_client.send_request(0, "", pose_array_2)
                 arm_client.get_logger().info(f'Response: {response.response}')     
+                time.sleep(1)
             else:
+                arm_client.get_logger().info(f'Response: {0.14 - yolo_robot_x + 0.055 + 0.01} {0.0 - yolo_robot_y * 1.2}')
                 pose_array = self.append_pose_init(0.14 - yolo_robot_x + 0.055 + 0.01, 0.0 - yolo_robot_y * 1.2, 0.122354 )
+                response = arm_client.send_request(0, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')
+                time.sleep(1)
 
-                pose_array = self.append_pose_init(0.14 - yolo_robot_x + 0.055 + 0.01, 0.0 - yolo_robot_y * 1.2, 0.122354 )
+                pose_array = self.append_pose_init(0.14 - yolo_robot_x + 0.055 + 0.01, 0.0 - yolo_robot_y * 1.2, 0.100354 )
+                response = arm_client.send_request(0, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')     
+                time.sleep(1)
 
 
             response = arm_client.send_request(2, "close")
@@ -472,7 +481,7 @@ class ManagingNode(Node):
             arm_client.get_logger().info(f'Response: {response.response}')    
 
             self.publish_control_conveyor("go",100.0)
-            time.sleep(3)
+            time.sleep(1)
 
             print("jobs_done")
 
