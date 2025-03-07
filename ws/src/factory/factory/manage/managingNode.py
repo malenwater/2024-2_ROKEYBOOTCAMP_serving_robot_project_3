@@ -209,14 +209,21 @@ class ManagingNode(Node):
     
     def choose_block(self,data_list):
         self.get_logger().info(f"choose_block: {data_list}")
+        pick_data = self.block_ids[self.count]
         if not data_list:
+            if pick_data == 0:
+                color = "빨강"
+            else:
+                color = "파랑"
+            self.get_logger().info(f"{self.count + 1}번째의 {color} 블럭 집기는 블럭이 없어 실패하였습니다.")
+            self.is_BLOCK = False
+            self.count += 1
             self.is_BLOCK = False
             self.count += 1
             return []
         # self.get_logger().info(f"choose_block: start")
         data_pose = self.check_pose(data_list)
         # self.get_logger().info(f"choose_block: {data_pose}")
-        pick_data = self.block_ids[self.count]
         # self.get_logger().info(f"choose_block: {pick_data}")
         # self.get_logger().info(f"choose_block: {data_pose['1'][0]}")
         # self.get_logger().info(f"choose_block: {not data_pose['1'] and data_pose['1'][0] == pick_data}")
@@ -318,7 +325,6 @@ class ManagingNode(Node):
                 arm_client.get_logger().info(f'Response: {response.response}')
                 time.sleep(1)
 
-                # pose_array = self.append_pose_init(0.00413404, -0.269808, 0.163616)
                 pose_array = self.append_pose_init(0.00413404, -0.269808, 0.202484)
 
                 response = arm_client.send_request(3, "", pose_array)
@@ -328,7 +334,6 @@ class ManagingNode(Node):
                 arm_client.get_logger().info(f'Response: {response.response}')
 
                 pose_array = self.append_pose_init(0.00143898, -0.344128, 0.250484)
-                # pose_array = self.append_pose_init(0.00143898, -0.344128, 0.242484)
 
                 response = arm_client.send_request(3, "", pose_array)
                 arm_client.get_logger().info(f'Response: {response.response}')     
@@ -613,8 +618,7 @@ class ManagingNode(Node):
         response = arm_client.send_request(1, "camera_home")
         arm_client.get_logger().info(f'Response: {response.response}')
         time.sleep(3)        
-        
-      
+         
     def sub_object_detection_callback(self, msg):
         """객체 감지 정보를 배열로 변환하고 출력하는 콜백 함수"""
         try:
@@ -656,30 +660,6 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
-
-
-# 위에서 보는 값 [0.0, -0.05522330836388308, -0.4049709280018093, 1.9987769666149904] 
-
-# arm_client.send_request(2, "open")
-# arm_client.send_request(2, "close")
-# arm_client.send_request(0, "", pose_array)
-# arm_client.send_request(3, "", pose_array)
-
-# arm_client.send_request(1, "home1")
-# arm_client.send_request(1, "home2")
-
-# arm_client.send_request(1, "conveyor_up")
-# arm_client.send_request(1, "conveyor_down")
-# arm_client.send_request(1, "camera_home")
-# arm_client.send_request(1, "test_conveyor")
-# arm_client.send_request(1, "box_home_01")
-
-# arm_client.send_request(1, "box_up_01")
-# arm_client.send_request(1, "box_up_02")
-# arm_client.send_request(1, "box_up_03")
-# arm_client.send_request(1, "box_front")
-# arm_client.send_request(1, "box_back_01")
-# arm_client.send_request(1, "box_back_put")
 
 if __name__ == "__main__":
     main()
