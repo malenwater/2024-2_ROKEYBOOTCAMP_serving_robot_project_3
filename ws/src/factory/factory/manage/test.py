@@ -16,11 +16,15 @@ def append_pose_init( x,y,z):
     
 def main():
     rclpy.init()  # rclpy 초기화
+# data: '[[1, 0.06974, -0.03807], [0, -0.05426, -0.03556], [1, 0.06702, 0.02...'
 
+# data: '[ [1, 0.067014, -0.037944], [0, -0.054621, -0.035955],[1, 0.066555, 0.023409]]'
+# # data: '[[1, 0.071504, 0.025092], [0, -0.058548, -0.03854], [1, 0.07134, -0.040672]]'
+# # data: '[ [1, 0.070192, -0.041], [0, -0.0574, -0.038704],[1, 0.07134, 0.02378]]'
     arm_client = TurtlebotArmClient()
     response = arm_client.send_request(2, "open")
     arm_client.get_logger().info(f'Response: {response.response}')  
-    response = arm_client.send_request(1, "home2")
+    response = arm_client.send_request(1, "camera_home")
     arm_client.get_logger().info(f'Response: {response.response}')   
     # response = arm_client.send_request(1, "box_back_put_2")
     # arm_client.get_logger().info(f'Response: {response.response}')   
@@ -53,11 +57,12 @@ def main():
 #     # pose_array = append_pose_init(-0.0016946549744881157, -0.05521983269987424, 0.17193338228588664)
     print("1")
     time.sleep(1)
-    pose_array = append_pose_init(0.17450947229003907, -0.06490245981445313, 0.122354)
+    pose_array = append_pose_init(0.2559, 0.07075, 0.122354)
     response = arm_client.send_request(0, "", pose_array)
+    #  x: 0.2554, y: 0.05915, z: 0.100354
     print("1")
     time.sleep(1)
-    pose_array = append_pose_init(0.17450947229003907, -0.06490245981445313, 0.089354)
+    pose_array = append_pose_init(0.25591600000000003, 0.07075200000000001, 0.089354)
     response = arm_client.send_request(0, "", pose_array)
     time.sleep(1)
     print("1")

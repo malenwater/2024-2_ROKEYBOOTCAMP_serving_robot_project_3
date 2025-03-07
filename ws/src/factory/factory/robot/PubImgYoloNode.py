@@ -12,10 +12,14 @@ class PubImgYoloNode(Node):
         super().__init__('pub_img_yolo_node')
         
         # 카메라 내부 파라미터 및 왜곡 계수
-        self.K = np.array([[1.39755585e+03, 0.0, 740],
-                           [0.0, 1.39879236e+03, 360],
-                           [0.0, 0.0, 1.0]])
-        self.D = np.array([2.97613204e-02, 5.68877296e-01, 1.56553998e-03, -3.11259015e-05, -1.90935153e+00])
+        # self.K = np.array([[1.39755585e+03, 0.0, 740],
+        #                    [0.0, 1.39879236e+03, 360],
+        #                    [0.0, 0.0, 1.0]])
+        # self.D = np.array([2.97613204e-02, 5.68877296e-01, 1.56553998e-03, -3.11259015e-05, -1.90935153e+00])
+        self.K = np.array([[1288.64415,    0.     ,  636.22318],
+        [0.     , 1294.26622,  450.07389],
+        [0.     ,    0.     ,    1.     ]])
+        self.D = np.array([[0.051971, 0.053343, 0.024273, 0.000262, 0.000000]])
 
         # 카메라 중심 및 초점 거리
         self.C_x, self.C_y = self.K[0, 2], self.K[1, 2]
@@ -25,7 +29,7 @@ class PubImgYoloNode(Node):
         self.OBJECT_REAL_WIDTH = 360  # 예제: 200mm (20cm)
 
         # YOLO 모델 로드
-        self.MODEL_PATH = '/mnt/sda1/rokey_project/8week/2024-2_ROKEYBOOTCAMP_serving_robot_project_3/ws/src/factory/factory/detect_best.pt'
+        self.MODEL_PATH = '/home/rokey1/A3/detect_best.pt'
         self.model = YOLO(self.MODEL_PATH)
 
         # 클래스별 색상 매핑
@@ -36,7 +40,8 @@ class PubImgYoloNode(Node):
             'Aruco': (255, 255, 0)
         }
 
-        self.m_Pixel = 0.000164
+        # self.m_Pixel = 0.000164
+        self.m_Pixel = 0.000153
         self.SENTER_W = 640
         self.SENTER_H = 360
         
